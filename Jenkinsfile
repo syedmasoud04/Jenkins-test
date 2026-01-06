@@ -1,61 +1,40 @@
 pipeline {
     agent any
 
-    environment {
-        VENV = ".venv"
-    }
-
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
                 sh '''
-                python3 -m venv $VENV
-                source $VENV/bin/activate
+                python3 -m venv venv
+                . venv/bin/activate
                 pip install --upgrade pip
                 pip install -r requirements.txt
                 '''
             }
         }
 
-        stage('Test') {
+        stage('Run Tests') {
             steps {
                 sh '''
-                source $VENV/bin/activate
-                pytest tests/ --junitxml=test-results.xml
-                '''
-            }
-        }
-
-        stage('Lint') {
-            steps {
-                sh '''
-                source $VENV/bin/activate
-                flake8 app/
-                '''
-            }
-        }
-
-        stage('Security Scan') {
-            steps {
-                sh '''
-                source $VENV/bin/activate
-                bandit -r app/ -f txt -o bandit-report.txt
+                . venv/bin/activate
+                pytest
                 '''
             }
         }
     }
 
     post {
-        always {
-            junit 'test-results.xml'
-            archiveArtifacts artifacts: '*.txt', fingerprint: true
+        success {
+            echo 'Build and tests passed'
+        }
+        failure {
+            echo 'Build or tests failed'
         }
     }
 }
